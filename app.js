@@ -39,17 +39,28 @@ var planetModel = mongoose.model('planets', dataSchema);
 
 
 app.post('/planet',   function(req, res) {
-   // console.log("Received Planet ID " + req.body.id)
-    planetModel.findOne({
-        id: req.body.id
-    }, function(err, planetData) {
-        if (err) {
-            alert("Ooops, We only have 9 planets and a sun. Select a number from 0 - 9")
-            res.send("Error in Planet Data")
-        } else {
-            res.send(planetData);
-        }
-    })
+    const { id } = req.body
+
+    if (typeof id !== 'string' && typeof id !== 'number') {
+        return res.status(400).json({
+            error: 'Invalid planet ID format'
+        })
+    }
+
+    const sanitizedId = String(id).replace(/[^a-zA-Z0-9_-]/g, '');
+
+    planetModel.findOne({ id: sanitizedId }).lean().exec((err, planetData) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ error: 'Database error' });
+            }
+
+            if (!planetData) {
+                return res.status(404).json({ message: 'Planet not found' });
+            }
+
+            return res.status(200).json(planetData);
+    });
 })
 
 app.get('/',   async (req, res) => {
